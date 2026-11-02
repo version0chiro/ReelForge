@@ -20,7 +20,7 @@ jobs:
           ./scripts/test-native.sh
           ./scripts/build-app.sh
           codesign --verify --deep --strict --verbose=2 dist/ReelForge.app
-          lipo -verify_arch arm64 x86_64 dist/ReelForge.app/Contents/MacOS/ReelForge
+          lipo dist/ReelForge.app/Contents/MacOS/ReelForge -verify_arch arm64 x86_64
       - name: Create archive
         run: ditto -c -k --sequesterRsrc --keepParent dist/ReelForge.app ReelForge-macOS-universal.zip
       - uses: actions/upload-artifact@v7
