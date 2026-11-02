@@ -1,0 +1,14 @@
+{
+  "name": "reelforge",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Native macOS gameplay highlight detector and multi-video vertical Reel cutter.",
+  "scripts": {
+    "start": "python3 -m http.server 4173 --bind 127.0.0.1",
+    "test": "node --test",
+    "check": "node --check src/analysis.js && node --check src/media.js && node --check src/app.js && node --test",
+    "native:build": "./Scripts/build-app.sh",
+    "native:test": "./Scripts/test-native.sh"
+  }
+}

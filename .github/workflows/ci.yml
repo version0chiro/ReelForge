@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  macos:
+    name: macOS Swift app
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run native tests
+        run: ./scripts/test-native.sh
+      - name: Build app bundle
+        run: ./scripts/build-app.sh
+      - name: Verify signature
+        run: |
+          codesign --verify --deep --strict --verbose=2 dist/ReelForge.app
+          lipo -verify_arch arm64 x86_64 dist/ReelForge.app/Contents/MacOS/ReelForge
+
+  windows:
+    name: Windows Python app
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: windows/requirements.txt
+      - name: Install runtime dependencies
+        run: python -m pip install -r windows/requirements.txt
+      - name: Run detector and Drive tests
+        run: python -m unittest discover -s windows/tests -v
+      - name: Start desktop UI offscreen
+        shell: pwsh
+        run: |
+          $env:PYTHONPATH = "windows"
+          $env:QT_QPA_PLATFORM = "offscreen"
+          python -m reelforge_windows --self-test

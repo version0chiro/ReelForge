@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#090c12">
+    <meta
+      name="description"
+      content="Find gameplay highlights from sound and visual activity, then cut a vertical Reel locally in your browser."
+    >
+    <title>ReelForge — Gameplay montage cutter</title>
+    <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <div class="ambient ambient-one"></div>
+    <div class="ambient ambient-two"></div>
+
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="ReelForge home">
+        <span class="brand-mark" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </span>
+        <span>
+          <strong>ReelForge</strong>
+          <small>gameplay montage cutter</small>
+        </span>
+      </a>
+      <div class="topbar-meta">
+        <span class="local-pill"><i></i> Local-only processing</span>
+        <span class="version">MVP 0.2</span>
+      </div>
+    </header>
+
+    <main class="app-shell">
+      <section class="workspace" aria-label="Video workspace">
+        <section id="emptyState" class="empty-state">
+          <div class="empty-copy">
+            <span class="eyebrow">From full match to vertical montage</span>
+            <h1>Find the moments.<br><em>Cut the noise.</em></h1>
+            <p>
+              ReelForge scans several gameplay videos for sustained audio and visual peaks,
+              then combines the best sequences into one editable 9:16 Reel.
+            </p>
+          </div>
+
+          <label id="dropZone" class="drop-zone" for="fileInput" tabindex="0">
+            <input id="fileInput" type="file" accept="video/*,.mp4,.mov,.webm,.m4v" multiple>
+            <span class="drop-icon" aria-hidden="true">
+              <svg viewBox="0 0 48 48" role="img">
+                <path d="M24 33V11m0 0-8 8m8-8 8 8M9 29v7a3 3 0 0 0 3 3h24a3 3 0 0 0 3-3v-7"/>
+              </svg>
+            </span>
+            <strong>Drop gameplay videos here</strong>
+            <span>or click to choose several clips</span>
+            <small>MP4, MOV, or WebM · processed on this device</small>
+          </label>
+
+          <div class="feature-strip" aria-label="Detection features">
+            <div>
+              <span class="feature-number">01</span>
+              <strong>Hear impact</strong>
+              <small>shots, reactions, music drops</small>
+            </div>
+            <div>
+              <span class="feature-number">02</span>
+              <strong>See action</strong>
+              <small>motion bursts and scene cuts</small>
+            </div>
+            <div>
+              <span class="feature-number">03</span>
+              <strong>Track crop</strong>
+              <small>action-aware vertical framing</small>
+            </div>
+          </div>
+        </section>
+
+        <section id="editor" class="editor" hidden>
+          <div class="source-bar">
+            <div class="source-file">
+              <span class="file-icon" aria-hidden="true"></span>
+              <div>
+                <strong id="fileName">Gameplay sources</strong>
+                <span id="fileMeta">0 videos</span>
+              </div>
+            </div>
+            <div class="source-actions">
+              <button id="addVideosButton" class="button button-quiet" type="button">Add videos</button>
+              <button id="replaceButton" class="button button-quiet" type="button">Replace all</button>
+            </div>
+          </div>
+          <div id="sourceList" class="source-list" aria-label="Imported gameplay videos"></div>
+
+          <div class="stage-grid">
+            <article class="panel preview-panel">
+              <div class="panel-heading">
+                <div>
+                  <span class="panel-kicker">Vertical output</span>
+                  <h2>Reel preview</h2>
+                </div>
+                <span id="previewBadge" class="preview-badge">9:16</span>
+              </div>
+
+              <div class="preview-wrap">
+                <div class="phone-frame">
+                  <canvas id="previewCanvas" width="540" height="960" aria-label="Vertical montage preview"></canvas>
+                  <div id="previewPlaceholder" class="preview-placeholder">
+                    <span>RF</span>
+                    <small>Analyze to build your cut</small>
+                  </div>
+                  <div id="clipOverlay" class="clip-overlay" hidden>
+                    <span id="clipOverlayNumber">CUT 01</span>
+                    <strong id="clipOverlayTime">0:00.0</strong>
+                  </div>
+                  <div id="safeZoneOverlay" class="safe-zone-overlay" aria-hidden="true">
+                    <span class="safe-zone-top">KEEP TEXT BELOW</span>
+                    <span class="safe-zone-right">SOCIAL UI</span>
+                    <span class="safe-zone-bottom">CAPTION SAFE LINE</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="transport">
+                <button id="previousClipButton" class="icon-button" type="button" aria-label="Previous cut" disabled>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5v14M18 6l-8 6 8 6V6Z"/></svg>
+                </button>
+                <button id="previewPlayButton" class="play-button" type="button" disabled>
+                  <svg class="play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7V5Z"/></svg>
+                  <svg class="stop-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v10H7z"/></svg>
+                  <span>Play reel</span>
+                </button>
+                <button id="nextClipButton" class="icon-button" type="button" aria-label="Next cut" disabled>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 5v14M6 6l8 6-8 6V6Z"/></svg>
+                </button>
+              </div>
+              <div class="playback-progress" aria-hidden="true">
+                <span id="playbackProgress"></span>
+              </div>
+            </article>
+
+            <article class="panel signals-panel">
+              <div class="panel-heading">
+                <div>
+                  <span class="panel-kicker">Detection map</span>
+                  <h2>Signal peaks</h2>
+                </div>
+                <button id="playSelectedButton" class="button button-quiet button-small" type="button" disabled>
+                  Play selected
+                </button>
+              </div>
+
+              <div class="stat-grid">
+                <div>
+                  <span>Sources / footage</span>
+                  <strong id="sourceDurationStat">—</strong>
+                </div>
+                <div>
+                  <span>Cuts found</span>
+                  <strong id="cutCountStat">—</strong>
+                </div>
+                <div>
+                  <span>Reel length</span>
+                  <strong id="reelDurationStat">—</strong>
+                </div>
+              </div>
+
+              <div class="signal-chart-wrap">
+                <canvas id="signalChart" aria-label="Audio and visual highlight signal chart"></canvas>
+                <div id="chartEmpty" class="chart-empty">
+                  Your sound and visual peaks will appear here.
+                </div>
+              </div>
+              <div class="chart-legend" aria-hidden="true">
+                <span><i class="legend-score"></i> Combined</span>
+                <span><i class="legend-audio"></i> Sound</span>
+                <span><i class="legend-visual"></i> Visuals</span>
+                <span><i class="legend-cut"></i> Selected cut</span>
+              </div>
+
+              <div id="analysisNote" class="analysis-note">
+                <span aria-hidden="true">i</span>
+                <p>Load several videos, tune the detection mix, then scan for epic sequences.</p>
+              </div>
+            </article>
+          </div>
+
+          <section class="panel cuts-panel">
+            <div class="panel-heading cuts-heading">
+              <div>
+                <span class="panel-kicker">Edit decision list</span>
+                <h2>Your montage</h2>
+              </div>
+              <p>Trim, reorder, remove, or override the crop for any cut.</p>
+            </div>
+            <div id="clipList" class="clip-list">
+              <div class="clip-list-empty">No cuts yet.</div>
+            </div>
+          </section>
+        </section>
+      </section>
+
+      <aside class="control-rail" aria-label="Montage controls">
+        <div class="rail-heading">
+          <span class="eyebrow">Cut controls</span>
+          <h2>Shape the montage</h2>
+          <p>Start broad, then tune the mix for your game.</p>
+        </div>
+
+        <form id="settingsForm">
+          <fieldset id="settingsFieldset" disabled>
+            <label class="field">
+              <span>
+                <strong>Target length</strong>
+                <small>final Reel duration</small>
+              </span>
+              <select id="targetDuration">
+                <option value="7">7 sec hook</option>
+                <option value="15" selected>15 sec</option>
+                <option value="30">30 sec</option>
+                <option value="45">45 sec</option>
+                <option value="60">60 sec</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span>
+                <strong>Cut order</strong>
+                <small>how the Reel opens</small>
+              </span>
+              <select id="orderMode">
+                <option value="hook" selected>Hook first</option>
+                <option value="chronological">Source order</option>
+              </select>
+            </label>
+
+            <label class="range-field">
+              <span class="range-heading">
+                <span>
+                  <strong>Sequence length</strong>
+                  <small>context around each epic peak</small>
+                </span>
+                <output id="clipDurationOutput">3.5s</output>
+              </span>
+              <input id="clipDuration" type="range" min="1.5" max="7" value="3.5" step="0.5">
+              <span class="range-ends"><i>snappy</i><i>more context</i></span>
+            </label>
+
+            <label class="range-field">
+              <span class="range-heading">
+                <span>
+                  <strong>Detection mix</strong>
+                  <small>what makes a highlight</small>
+                </span>
+                <output id="detectionMixOutput">55% sound</output>
+              </span>
+              <input id="detectionMix" type="range" min="0" max="100" value="55" step="5">
+              <span class="range-ends"><i>visuals</i><i>sound</i></span>
+            </label>
+
+            <label class="range-field">
+              <span class="range-heading">
+                <span>
+                  <strong>Sensitivity</strong>
+                  <small>how many peaks qualify</small>
+                </span>
+                <output id="sensitivityOutput">Balanced</output>
+              </span>
+              <input id="sensitivity" type="range" min="0" max="100" value="58" step="1">
+              <span class="range-ends"><i>selective</i><i>eager</i></span>
+            </label>
+
+            <label class="field">
+              <span>
+                <strong>Scan detail</strong>
+                <small>visual sampling density</small>
+              </span>
+              <select id="scanQuality">
+                <option value="fast">Fast</option>
+                <option value="balanced" selected>Balanced</option>
+                <option value="detailed">Detailed</option>
+              </select>
+            </label>
+
+            <div class="field-divider"><span>Vertical crop</span></div>
+
+            <label class="field">
+              <span>
+                <strong>Framing</strong>
+                <small>preserve detail or fill screen</small>
+              </span>
+              <select id="framingMode">
+                <option value="adaptive" selected>Adaptive quality</option>
+                <option value="crop">Fill 9:16 crop</option>
+                <option value="fit">Full frame + blur</option>
+              </select>
+            </label>
+
+            <label class="range-field">
+              <span class="range-heading">
+                <span>
+                  <strong>Action tracking</strong>
+                  <small>follow visual activity</small>
+                </span>
+                <output id="cropStrengthOutput">85%</output>
+              </span>
+              <input id="cropStrength" type="range" min="0" max="100" value="85" step="5">
+              <span class="range-ends"><i>locked center</i><i>follow action</i></span>
+            </label>
+
+            <label class="range-field">
+              <span class="range-heading">
+                <span>
+                  <strong>Crop bias</strong>
+                  <small>nudge the framing</small>
+                </span>
+                <output id="cropBiasOutput">Center</output>
+              </span>
+              <input id="cropBias" type="range" min="-100" max="100" value="0" step="5">
+              <span class="range-ends"><i>left</i><i>right</i></span>
+            </label>
+
+            <label class="toggle-field">
+              <span>
+                <strong>Reel safe-zone guide</strong>
+                <small>preview caption and UI clearance</small>
+              </span>
+              <input id="safeZoneToggle" type="checkbox" checked>
+              <i aria-hidden="true"></i>
+            </label>
+
+            <div class="field-divider"><span>Output quality</span></div>
+
+            <label class="field">
+              <span>
+                <strong>Render profile</strong>
+                <small>resolution and bitrate</small>
+              </span>
+              <select id="outputQuality">
+                <option value="enhanced" selected>Enhanced 1080p · 20 Mbps</option>
+                <option value="standard">Standard 720p · 8 Mbps</option>
+              </select>
+            </label>
+
+            <div id="qualityNotice" class="quality-notice">
+              HQ scaling preserves framing and bitrate. It does not invent missing detail.
+            </div>
+          </fieldset>
+        </form>
+
+        <div class="rail-actions">
+          <button id="analyzeButton" class="button button-primary" type="button" disabled>
+            <span class="button-spark" aria-hidden="true">✦</span>
+            <span>Find highlights</span>
+          </button>
+          <button id="cancelButton" class="button button-danger" type="button" hidden>
+            Cancel operation
+          </button>
+
+          <div id="operationProgressWrap" class="operation-progress" hidden>
+            <div>
+              <span id="operationLabel">Scanning video…</span>
+              <strong id="operationPercent">0%</strong>
+            </div>
+            <div class="progress-track"><span id="operationProgress"></span></div>
+          </div>
+
+          <div id="statusMessage" class="status-message" role="status" aria-live="polite">
+            <span></span>
+            <p>Choose gameplay footage to begin.</p>
+          </div>
+
+          <button id="exportButton" class="button button-export" type="button" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3v12m0 0 5-5m-5 5-5-5M5 18v2h14v-2"/>
+            </svg>
+            <span>Export vertical montage</span>
+          </button>
+          <a id="downloadAgain" class="download-again" href="#" hidden>Download the last export again</a>
+          <button id="exportPlanButton" class="button button-quiet" type="button" disabled>
+            Save editable cut plan
+          </button>
+          <p id="exportHint" class="export-hint">Export support will be checked in your browser.</p>
+        </div>
+
+        <div class="privacy-note">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M7 10V8a5 5 0 0 1 10 0v2m-9 0h8a2 2 0 0 1 2 2v7H6v-7a2 2 0 0 1 2-2Z"/>
+          </svg>
+          <p><strong>Your footage stays here.</strong> No upload, account, or cloud processing.</p>
+        </div>
+      </aside>
+    </main>
+
+    <video id="sourceVideo" class="source-video" playsinline preload="auto"></video>
+
+    <script type="module" src="./src/app.js"></script>
+  </body>
+</html>
